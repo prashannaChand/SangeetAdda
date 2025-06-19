@@ -1,0 +1,2 @@
+SangeetAdda is a local network application where a server streams songs (preloaded audio files — WAV or decoded MP3) to multiple clients on the same LAN.
+It feels like a shared “adda” where everyone listens to the same playlist — live.
