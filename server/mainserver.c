@@ -8,7 +8,12 @@
 #pragma comment(lib, "ws2_32.lib") // Winsock library
 
 #define PORT 8080
-#define CHUNK_SIZE 4096
+#define CHUNK_SIZE 16384      // Increased chunk size for better throughput
+
+// Audio parameters to calculate sleep duration
+#define SAMPLE_RATE 44100
+#define NUM_CHANNELS 2
+#define BITS_PER_SAMPLE 16
 
 int main() {
     WSADATA wsa;
@@ -73,6 +78,7 @@ int main() {
     // 7. Loop: read chunk → send(chunk) → Sleep()
     char buffer[CHUNK_SIZE];
     size_t bytes_read;
+    const double bytes_per_sec = SAMPLE_RATE * NUM_CHANNELS * (BITS_PER_SAMPLE / 8);
 
     while ((bytes_read = fread(buffer, 1, CHUNK_SIZE, fp)) > 0) {
         int sent = send(client_fd, buffer, (int)bytes_read, 0);
@@ -80,7 +86,16 @@ int main() {
             printf("Send failed. Error Code: %d\n", WSAGetLastError());
             break;
         }
-        Sleep(25);  // Sleep 25 ms (instead of usleep)
+
+        // Calculate sleep time (ms) for the chunk sent to pace streaming smoothly
+        double chunk_duration_ms = ((double)bytes_read / bytes_per_sec) * 1000.0;
+
+        // Minimum sleep to avoid CPU hogging but don't oversleep
+        if (chunk_duration_ms < 1) {
+            chunk_duration_ms = 1;
+        }
+
+        Sleep((DWORD)chunk_duration_ms);
     }
 
     // 8. Cleanup
